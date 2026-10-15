@@ -54,6 +54,7 @@ if(!crypto?.subtle||!window.indexedDB){$('unlock').disabled=true;$('gateMessage'
   const driveStatus=document.getElementById('driveTestStatus');
   const cloudCheck=document.getElementById('cloudCheck');
   const cloudUpload=document.getElementById('cloudUpload');
+  const cloudRestore=document.getElementById('cloudRestore');
   const cloudStatus=document.getElementById('cloudStatus');
   const cloudFilename='oncoortho-copia-cifrada-v1.json';
   let driveAuth=null;
@@ -77,10 +78,10 @@ if(!crypto?.subtle||!window.indexedDB){$('unlock').disabled=true;$('gateMessage'
     const account=client.getAllAccounts()[0];
     if(account){
       status.textContent='Microsoft conectado: '+(account.username||account.name||'sesión iniciada')+'. OneDrive aún NO está sincronizado.';
-      button.classList.add('hide');disconnect.classList.remove('hide');driveButton.disabled=false;cloudCheck.disabled=false;cloudUpload.disabled=document.getElementById('app').classList.contains('hide');
+      button.classList.add('hide');disconnect.classList.remove('hide');driveButton.disabled=false;cloudCheck.disabled=false;cloudUpload.disabled=document.getElementById('app').classList.contains('hide');cloudRestore.disabled=false;
     }else{
       status.textContent='Sin conectar. Tu base clínica permanece local y cifrada.';
-      button.classList.remove('hide');disconnect.classList.add('hide');driveButton.disabled=true;cloudCheck.disabled=true;cloudUpload.disabled=true;driveStatus.textContent='Conecta primero tu cuenta Microsoft.';cloudStatus.textContent='Conecta Microsoft y desbloquea la base local para habilitar la prueba.';
+      button.classList.remove('hide');disconnect.classList.add('hide');driveButton.disabled=true;cloudCheck.disabled=true;cloudUpload.disabled=true;cloudRestore.disabled=true;driveStatus.textContent='Conecta primero tu cuenta Microsoft.';cloudStatus.textContent='Conecta Microsoft y desbloquea la base local para habilitar la prueba.';
     }
   }
   button.addEventListener('click',async()=>{
@@ -152,10 +153,10 @@ if(!crypto?.subtle||!window.indexedDB){$('unlock').disabled=true;$('gateMessage'
     cloudCheck.disabled=true;cloudStatus.textContent='Comprobando la copia cifrada de OneDrive…';
     try{
       const r=await graphCall('/me/drive/special/approot:/'+cloudFilename);
-      if(r.status===404){cloudStatus.textContent='No existe todavía una copia cifrada de OncoOrtho en OneDrive. Puedes crear la primera con “Subir copia cifrada”.';localStorage.removeItem('oncoortho_cloud_etag');return;}
+      if(r.status===404){cloudStatus.textContent='No existe todavía una copia cifrada de OncoOrtho en OneDrive. Puedes crear la primera con “Subir copia cifrada”.';localStorage.removeItem('oncoortho_cloud_etag');cloudRestore.disabled=true;return;}
       if(!r.ok)throw Error('Microsoft Graph HTTP '+r.status);
       const meta=await r.json(),known=localStorage.getItem('oncoortho_cloud_etag');
-      cloudStatus.textContent='Copia cifrada encontrada en OneDrive · modificada '+(meta.lastModifiedDateTime||'fecha no disponible')+(known&&known===meta.eTag?' · coincide con la última versión conocida por este navegador.':' · versión de nube detectada.');
+      cloudStatus.textContent='Copia cifrada encontrada en OneDrive · modificada '+(meta.lastModifiedDateTime||'fecha no disponible')+(known&&known===meta.eTag?' · coincide con la última versión conocida por este navegador.':' · versión de nube detectada.');cloudRestore.disabled=false;
     }catch(e){cloudStatus.textContent='No se pudo comprobar la nube: '+(e.message||'error desconocido')+'.';}
     finally{cloudCheck.disabled=client.getAllAccounts().length===0;}
   });
@@ -216,7 +217,7 @@ if(!crypto?.subtle||!window.indexedDB){$('unlock').disabled=true;$('gateMessage'
     catch(e){status.textContent='No se pudo cerrar la sesión de Microsoft: '+(e.errorCode||e.message||'error');}
     finally{disconnect.disabled=false;}
   });
-  new MutationObserver(()=>{cloudUpload.disabled=client.getAllAccounts().length===0||document.getElementById('app').classList.contains('hide');if(!cloudUpload.disabled&&cloudStatus.textContent.includes('Conecta Microsoft'))cloudStatus.textContent='Base local desbloqueada. Puedes comprobar la nube o subir una copia cifrada.';}).observe(document.getElementById('app'),{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{cloudUpload.disabled=client.getAllAccounts().length===0||document.getElementById('app').classList.contains('hide');cloudRestore.disabled=client.getAllAccounts().length===0;if(!cloudUpload.disabled&&cloudStatus.textContent.includes('Conecta Microsoft'))cloudStatus.textContent='Base local desbloqueada. Puedes comprobar la nube o subir una copia cifrada.';}).observe(document.getElementById('app'),{attributes:true,attributeFilter:['class']});
   update();
 })();
 </script>
